@@ -1,0 +1,165 @@
+apiVersion: controlplane.example.com/v1alpha1
+kind: ControlPlane
+metadata:
+  name: multi-region-controlplane
+  namespace: controlplane-system
+  labels:
+    app.kubernetes.io/name: controlplane-operator
+    app.kubernetes.io/managed-by: controlplane-operator
+spec:
+  argocd:
+    namespace: argocd
+    repository: https://github.com/example/argocd-config
+    branch: main
+    projectName: multi-region
+    serverUrl: https://argocd.example.com
+    adminEnabled: true
+    syncTimeout: 300
+    retryLimit: 3
+    controllerLogLevel: info
+    applicationSetNamespace: argocd
+  crossplane:
+    providerName: aws
+    providerConfig: aws-provider
+    compositionNamespace: crossplane-system
+    enableAutoComposition: true
+    serviceAccountName: crossplane-provider
+    runtimeNamespace: crossplane-system
+  vault:
+    address: https://vault.example.com:8200
+    pathPrefix: secret/data/controlplane
+    authMethod: kubernetes
+    role: controlplane-operator
+    k8sAuthPath: auth/kubernetes
+    secretEngine: kv-v2
+    pkiRole: controlplane-ca
+    skipTLSVerify: false
+  aws:
+    region: us-east-1
+    s3Bucket: controlplane-state-us-east-1
+    dynamoTable: controlplane-replication
+    kmsKeyId: alias/controlplane-master
+    enablePublicAccess: false
+    vpcId: vpc-0123456789abcdef0
+    subnetIds:
+      - subnet-0123456789abcdef0
+      - subnet-0123456789abcdef1
+    securityGroupIds:
+      - sg-0123456789abcdef0
+    iamRoleArn: arn:aws:iam::123456789012:role/ControlPlaneOperator
+    tags:
+      Environment: production
+      ManagedBy: controlplane-operator
+      Project: multi-region-platform
+  regions:
+    - name: us-east-1
+      priority: 1
+      isPrimary: true
+      clusterName: us-east-1-cluster
+      clusterEndpoint: https://kube-us-east-1.example.com:6443
+      clusterRegion: us-east-1
+      vaultAddress: https://vault-us-east-1.example.com:8200
+      enabledFeatures:
+        - gitops
+        - provisioning
+        - monitoring
+        - rbac-federation
+      healthCheckInterval: 30
+      failoverWeight: 100
+    - name: us-west-2
+      priority: 2
+      isPrimary: false
+      clusterName: us-west-2-cluster
+      clusterEndpoint: https://kube-us-west-2.example.com:6443
+      clusterRegion: us-west-2
+      vaultAddress: https://vault-us-west-2.example.com:8200
+      enabledFeatures:
+        - gitops
+        - provisioning
+        - monitoring
+      healthCheckInterval: 30
+      failoverWeight: 80
+    - name: eu-west-1
+      priority: 3
+      isPrimary: false
+      clusterName: eu-west-1-cluster
+      clusterEndpoint: https://kube-eu-west-1.example.com:6443
+      clusterRegion: eu-west-1
+      vaultAddress: https://vault-eu-west-1.example.com:8200
+      enabledFeatures:
+        - gitops
+        - monitoring
+      healthCheckInterval: 30
+      failoverWeight: 60
+    - name: ap-southeast-1
+      priority: 4
+      isPrimary: false
+      clusterName: ap-southeast-1-cluster
+      clusterEndpoint: https://kube-ap-southeast-1.example.com:6443
+      clusterRegion: ap-southeast-1
+      vaultAddress: https://vault-ap-southeast-1.example.com:8200
+      enabledFeatures:
+        - gitops
+        - monitoring
+      healthCheckInterval: 30
+      failoverWeight: 50
+  replication:
+    enabled: true
+    strategy: quorum
+    quorumSize: 3
+    syncInterval: 5
+    heartbeatInterval: 1
+    consensusTimeout: 10
+    conflictResolution: primary-wins
+    replicationNamespace: crossplane-replication
+    etcdEndpoints:
+      - https://etcd-0.example.com:2379
+      - https://etcd-1.example.com:2379
+      - https://etcd-2.example.com:2379
+  failover:
+    enabled: true
+    autoFailover: true
+    healthCheckInterval: 15
+    failureThreshold: 3
+    recoveryThreshold: 2
+    postFailoverScript: "/scripts/post-failover.sh"
+    failoverTimeout: 300
+    rollbackEnabled: true
+    maxFailoverDuration: 600
+    healthCheckEndpoints:
+      - https://kube-us-east-1.example.com:6443/healthz
+      - https://kube-us-west-2.example.com:6443/healthz
+  rbac:
+    federated: true
+    clusterRoles:
+      - admin
+      - edit
+      - view
+      - custom-cluster-reader
+    namespaceRoles:
+      - admin
+      - edit
+      - view
+      - custom-ns-deployer
+    syncInterval: 60
+    defaultRole: view
+    adminUsers:
+      - admin@example.com
+      - platform-team@example.com
+  monitoring:
+    enabled: true
+    prometheusUrl: https://prometheus.example.com
+    grafanaUrl: https://grafana.example.com
+    alertManagerUrl: https://alertmanager.example.com
+    metricsPort: 8080
+    logLevel: info
+    traceEndpoint: https://tempo.example.com:4317
+    retentionDays: 30
+  topology:
+    clusterCount: 12
+    regionCount: 4
+    meshMode: star
+    serviceMesh: istio
+    ingressClass: nginx
+    cniPlugin: cilium
+    ccmProvider: aws

@@ -1,0 +1,266 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: controlplane-operator
+  labels:
+    app.kubernetes.io/name: controlplane-operator
+    app.kubernetes.io/component: rbac
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+      - serviceaccounts
+      - services
+      - pods
+      - pods/log
+      - events
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/status
+      - secrets/status
+      - serviceaccounts/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "apps"
+    resources:
+      - deployments
+      - statefulsets
+      - daemonsets
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - "apps"
+    resources:
+      - deployments/status
+      - statefulsets/status
+      - daemonsets/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - clusterrolebindings
+      - clusterroles
+      - rolebindings
+      - roles
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+      - bind
+      - escalate
+  - apiGroups:
+      - "rbac.authorization.k8s.io"
+    resources:
+      - clusterrolebindings/status
+      - clusterroles/status
+      - rolebindings/status
+      - roles/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "argoproj.io"
+    resources:
+      - applications
+      - applicationsets
+      - appprojects
+      - applicationsets/finalizers
+      - applications/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - "argoproj.io"
+    resources:
+      - applications/status
+      - applicationsets/status
+      - appprojects/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "pkg.crossplane.io"
+    resources:
+      - providers
+      - providerconfigs
+      - configurations
+      - compositionrevisions
+      - claims
+      - environments
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - "pkg.crossplane.io"
+    resources:
+      - providers/status
+      - providerconfigs/status
+      - configurations/status
+      - compositionrevisions/status
+      - claims/status
+      - environments/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - "apiextensions.k8s.io"
+    resources:
+      - customresourcedefinitions
+      - customresourcedefinitions/status
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "admissionregistration.k8s.io"
+    resources:
+      - validatingwebhookconfigurations
+      - mutatingwebhookconfigurations
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - "coordination.k8s.io"
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - "controlplane.example.com"
+    resources:
+      - controlplanes
+      - controlplanes/status
+      - controlplanes/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: controlplane-operator-leader-election
+  namespace: controlplane-system
+  labels:
+    app.kubernetes.io/name: controlplane-operator
+    app.kubernetes.io/component: rbac
+rules:
+  - apiGroups:
+      - ""
+      - coordination.k8s.io
+    resources:
+      - configmaps
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - controlplane-operator-leader-election
+    verbs:
+      - get
+      - update
+      - patch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: controlplane-operator-leader-election
+  namespace: controlplane-system
+  labels:
+    app.kubernetes.io/name: controlplane-operator
+    app.kubernetes.io/component: rbac
+subjects:
+  - kind: ServiceAccount
+    name: controlplane-operator
+    namespace: controlplane-system
+roleRef:
+  kind: Role
+  name: controlplane-operator-leader-election
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: controlplane-operator
+  labels:
+    app.kubernetes.io/name: controlplane-operator
+    app.kubernetes.io/component: rbac
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: controlplane-operator
+subjects:
+  - kind: ServiceAccount
+    name: controlplane-operator
+    namespace: controlplane-system
+
+---
